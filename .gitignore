@@ -5,6 +5,7 @@
 .ninja*
 **/build*/
 .DS_Store
+.cache
 
 .vscode/settings.json
 

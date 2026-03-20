@@ -1,0 +1,46 @@
+{
+    "version": 5,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 23,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "default",
+            "hidden": true,
+            "displayName": "Default Config",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "TOOLCHAIN_DIR": "/app/install/llvm",
+                "HARDWARE_BACKEND": "RTL",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": true
+            }
+        },
+        {
+            "name": "chimera-host",
+            "inherits": "default",
+            "displayName": "Chimera (Host)",
+            "cacheVariables": {
+                "TARGET_PLATFORM": "chimera-host"
+            }
+        },
+        {
+            "name": "chimera-open",
+            "inherits": "default",
+            "displayName": "Chimera (Open)",
+            "cacheVariables": {
+                "TARGET_PLATFORM": "chimera-open"
+            }
+        },
+        {
+            "name": "chimera-convolve",
+            "inherits": "default",
+            "displayName": "Chimera (Convolve)",
+            "cacheVariables": {
+                "TARGET_PLATFORM": "chimera-convolve"
+            }
+        }
+    ]
+}
