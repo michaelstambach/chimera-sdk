@@ -25,7 +25,8 @@ chimera-open:
   host/uartSimple,
   snitchCluster/matmul,
   snitchCluster/snrt,
-  snitchCluster/simpleOffload
+  snitchCluster/simpleOffload,
+  snitchCluster/doublelib
 ]]
 [[
 chimera-host:
