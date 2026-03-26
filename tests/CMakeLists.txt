@@ -26,7 +26,8 @@ chimera-open:
   snitchCluster/matmul,
   snitchCluster/snrt,
   snitchCluster/simpleOffload,
-  snitchCluster/doublelib
+  snitchCluster/doublelib,
+  snitchCluster/dynamic
 ]]
 [[
 chimera-host:
