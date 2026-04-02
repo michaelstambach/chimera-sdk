@@ -26,4 +26,5 @@ add_chimera_test(
 # WIESEP: Link the host and cluster code to the test executable
 target_link_libraries(${TEST_NAME} PUBLIC ${TEST_NAME}_host)
 target_link_libraries(${TEST_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src_cluster/test_cluster_so_bin.o")
+target_link_libraries(${TEST_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src_cluster/cluster_ret1_so_bin.o")
 

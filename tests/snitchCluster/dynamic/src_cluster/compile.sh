@@ -12,3 +12,4 @@
 
 # embed main library as "file" into data section
 /app/install/llvm/bin/llvm-objcopy -I binary -O elf32-littleriscv test_cluster.so test_cluster_so_bin.o
+/app/install/llvm/bin/llvm-objcopy -I binary -O elf32-littleriscv cluster_ret1.so cluster_ret1_so_bin.o
