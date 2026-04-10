@@ -20,6 +20,7 @@ struct dyn_loaded {
 };
 
 int load_so(struct dyn_loaded* dyn, unsigned char* so_start);
+void load_self(struct dyn_loaded* dyn);
 
 Elf32_Sym* locate_symbol(const struct dyn_loaded* dyns, const char* name);
 void* get_symbol_pointer(const struct dyn_loaded* dyns, const char* name);
@@ -27,4 +28,5 @@ void* get_symbol_pointer(const struct dyn_loaded* dyns, const char* name);
 void print_reloc_sym(const struct dyn_loaded* dyns);
 void print_sym_info(const struct dyn_loaded* dyns, const char* name);
 
-void relocate_single_symbol(const struct dyn_loaded* dyn_main, const struct dyn_loaded* dyn_provider, const char* name);
+void relocate_global_pointer(const struct dyn_loaded* dyn_main);
+void attempt_relocations(const struct dyn_loaded* dyn_main, const struct dyn_loaded* dyn_provider);

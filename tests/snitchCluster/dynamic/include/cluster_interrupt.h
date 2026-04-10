@@ -1,0 +1,8 @@
+
+#ifndef _CLUSTER_INTERRUPT_INCLUDE_GUARD_
+#define _CLUSTER_INTERRUPT_INCLUDE_GUARD_
+
+void clusterInterruptHandler();
+
+#endif // _CLUSTER_INTERRUPT_INCLUDE_GUARD_
+

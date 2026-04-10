@@ -1,10 +1,11 @@
 
 
 // Include Application Headers
-// #include "test_cluster.h"
+#include "cluster_interrupt.h"
 
 // Include Target Specific Headers
 #include "alloc.h"
+#include "dma/dma.h"
 #include "elf.h"
 #include "soc.h"
 
@@ -14,15 +15,15 @@
 // Include Runtime Headers
 #include "log.h"
 #include "dynamic.h"
+#include "test_cluster.h"
+#include "trampoline_snitchCluster.h"
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #define CLUSTER1 0
 #define STACK_ADDRESS (_chimera_clusterBase[CLUSTER1] + 0x20000 - 1)
-
-extern void* __global_pointer$;
-extern void* __base_clint;
 
 extern unsigned char _binary_test_cluster_so_start[];
 extern unsigned char _binary_test_cluster_so_end[];
@@ -31,6 +32,36 @@ extern unsigned char _binary_test_cluster_so_size[];
 extern unsigned char _binary_cluster_ret1_so_start[];
 extern unsigned char _binary_cluster_ret1_so_end[];
 extern unsigned char _binary_cluster_ret1_so_size[];
+
+extern unsigned char _binary_cluster_ret2_so_start[];
+extern unsigned char _binary_cluster_ret2_so_end[];
+extern unsigned char _binary_cluster_ret2_so_size[];
+
+
+int32_t clusterOffload(void *args, void* workFunction) {
+    void *stack_cluster_ptr[NUM_CLUSTER_CORES];
+    generate_snitchCluster_SPs_uniform(CLUSTER1, (void *)STACK_ADDRESS, 0x2000, stack_cluster_ptr);
+
+    setup_snitchCluster_interruptHandler(clusterInterruptHandler);
+
+    set_snitchCluster_clockGating(CLUSTER1, 0);
+
+    set_snitchCluster_reset(CLUSTER1, 1);
+    for (volatile int i = 0; i < 10; i++);
+    set_snitchCluster_reset(CLUSTER1, 0);
+
+    printf_log("Waiting for cluster to finish...\n");
+
+    offload_snitchCluster(workFunction, NULL, stack_cluster_ptr, CLUSTER1);
+    uint32_t retVal = wait_snitchCluster_return(CLUSTER1);
+
+    set_snitchCluster_clockGating(CLUSTER1, 1);
+
+    printf("Returned value: 0x%08x (%d)\n", retVal, retVal);
+
+    return retVal;
+}
+
 
 int main(void) {
 
@@ -42,22 +73,31 @@ int main(void) {
 
     printf_log("loading secondary so\n");
     struct dyn_loaded* dyns_prov = memory_island_malloc(sizeof(struct dyn_loaded));
-    load_so(dyns_prov, _binary_cluster_ret1_so_start);
+    load_so(dyns_prov, _binary_cluster_ret2_so_start);
 
     uint32_t (*getlibvar)(void) = get_symbol_pointer(dyns_main, "getLibraryVariant");
+    if (getlibvar == NULL) {
+        printf_log("getLibraryVariant() not found!\n");
+        return -1;
+    }
 
+    relocate_global_pointer(dyns_main);
+    attempt_relocations(dyns_main, dyns_prov);
     uint32_t lib_var = getlibvar();
-    uint32_t* lib_var_p = get_symbol_pointer(dyns_main, "libraryVariant");
-    printf_log("before relocation: getLibraryVariant()->%u, libraryVariant points to %p\n", lib_var, lib_var_p);
-    relocate_single_symbol(dyns_main, dyns_prov, "libraryVariant");
-    lib_var = getlibvar();
-    lib_var_p = get_symbol_pointer(dyns_main, "libraryVariant");
-    printf_log("after relocation: getLibraryVariant()->%u, libraryVariant points to %p\n", lib_var, lib_var_p);
+    printf_log("after relocation: getLibraryVariant()->%u, libraryVariant points to %p\n", lib_var);
 
-    // printf_log("Symbols in the relocation section:\n");
-    // print_reloc_sym(dyns_main);
+    // attempt offloading the now linked function
 
-    //print_sym_info(dyns_main, "clusterEntry");
+    void (*clusterInterruptHandler)(void) = get_symbol_pointer(dyns_main, "clusterInterruptHandler");
+    uint32_t (*clusterEntry)(void* args) = get_symbol_pointer(dyns_main, "clusterEntry");
+
+    printf_log("attempting to execute cluster function on the host...\n");
+    uint32_t retValHost = clusterEntry(NULL);
+    printf_log("return value on host was: %u\n", retValHost);
+
+    printf_log("attempting to execute cluster function on the cluster...\n");
+    uint32_t retValCluster = clusterOffload(NULL, clusterEntry);
+    printf_log("return value on cluster was: %u\n", retValCluster);
 
 
     return 0;

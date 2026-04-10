@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 
-void clusterInterruptHandler();
 
 int32_t clusterEntry(void *args);
 int32_t getLibraryVariant();
@@ -14,5 +13,6 @@ int32_t getLibraryVariant();
 extern int32_t libraryVariant;
 
 int32_t clusterWork(void *args);
+// int32_t clusterOffload(void *args);
 
 #endif //_TEST_CLUSTER_INCLUDE_GUARD_
