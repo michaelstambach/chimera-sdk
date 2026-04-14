@@ -25,17 +25,17 @@
 #define CLUSTER1 0
 #define STACK_ADDRESS (_chimera_clusterBase[CLUSTER1] + 0x20000 - 1)
 
-extern unsigned char _binary_test_cluster_so_start[];
-extern unsigned char _binary_test_cluster_so_end[];
-extern unsigned char _binary_test_cluster_so_size[];
+extern unsigned char _binary_test_snitchCluster_dynamic_cluster_start[];
+extern unsigned char _binary_test_snitchCluster_dynamic_cluster_end[];
+extern unsigned char _binary_test_snitchCluster_dynamic_cluster_size[];
 
-extern unsigned char _binary_cluster_ret1_so_start[];
-extern unsigned char _binary_cluster_ret1_so_end[];
-extern unsigned char _binary_cluster_ret1_so_size[];
+extern unsigned char _binary_test_snitchCluster_dynamic_cluster_work1_start[];
+extern unsigned char _binary_test_snitchCluster_dynamic_cluster_work1_end[];
+extern unsigned char _binary_test_snitchCluster_dynamic_cluster_work1_size[];
 
-extern unsigned char _binary_cluster_ret2_so_start[];
-extern unsigned char _binary_cluster_ret2_so_end[];
-extern unsigned char _binary_cluster_ret2_so_size[];
+extern unsigned char _binary_test_snitchCluster_dynamic_cluster_work2_start[];
+extern unsigned char _binary_test_snitchCluster_dynamic_cluster_work2_end[];
+extern unsigned char _binary_test_snitchCluster_dynamic_cluster_work2_size[];
 
 
 int32_t clusterOffload(void *args, void* workFunction) {
@@ -69,11 +69,11 @@ int main(void) {
 
     printf_log("loading main so\n");
     struct dyn_loaded* dyns_main = memory_island_malloc(sizeof(struct dyn_loaded));
-    load_so(dyns_main, _binary_test_cluster_so_start);
+    load_so(dyns_main, _binary_test_snitchCluster_dynamic_cluster_start);
 
     printf_log("loading secondary so\n");
     struct dyn_loaded* dyns_prov = memory_island_malloc(sizeof(struct dyn_loaded));
-    load_so(dyns_prov, _binary_cluster_ret2_so_start);
+    load_so(dyns_prov, _binary_test_snitchCluster_dynamic_cluster_work2_start);
 
     uint32_t (*getlibvar)(void) = get_symbol_pointer(dyns_main, "getLibraryVariant");
     if (getlibvar == NULL) {

@@ -35,6 +35,9 @@ string(REGEX MATCH "^[a-z0-9]+" ISA_CLUSTER_SNITCH_BASE ${ISA_CLUSTER_SNITCH})
 
 project(chimera-sdk LANGUAGES C ASM)
 
+# force dynamic linking to be available (this gets set to false when using platform "Generic")
+set_property(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS TRUE)
+
 message(STATUS "[CHIMERA-SDK] ABI_HOST              : ${ABI_HOST}")
 message(STATUS "[CHIMERA-SDK] ABI_CLUSTER_SNITCH    : ${ABI_CLUSTER_SNITCH}")
 message(STATUS "[CHIMERA-SDK] ISA_HOST              : ${ISA_HOST}")
