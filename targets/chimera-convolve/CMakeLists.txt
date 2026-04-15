@@ -125,7 +125,7 @@ target_compile_options(runtime_cluster_snitch
 target_link_options(runtime_cluster_snitch
   PUBLIC
   -L${CMAKE_CURRENT_LIST_DIR}
-  -Tlink.ld
+  -T$<IF:$<BOOL:$<TARGET_PROPERTY:LINK_DYNAMIC>>,linkrel.ld,link.ld>
   --target=riscv32-unknown-elf
   -mabi=${ABI_CLUSTER_SNITCH}
   -nostartfiles

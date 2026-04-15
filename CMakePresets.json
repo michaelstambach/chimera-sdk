@@ -39,7 +39,9 @@
             "inherits": "default",
             "displayName": "Chimera (Convolve)",
             "cacheVariables": {
-                "TARGET_PLATFORM": "chimera-convolve"
+                "TARGET_PLATFORM": "chimera-convolve",
+                "HARDWARE_BACKEND": "ASIC",
+                "CHIMERA_UNIFIED_ELF": "ON"
             }
         }
     ]

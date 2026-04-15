@@ -5,7 +5,6 @@
 
 // Include Target Specific Headers
 #include "alloc.h"
-#include "dma/dma.h"
 #include "elf.h"
 #include "soc.h"
 

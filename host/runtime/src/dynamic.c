@@ -1,12 +1,15 @@
 
 #include "dynamic.h"
-#include "dma/dma.h"
 #include "elf.h"
 #include "log.h"
 #include "driver.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef CHIMERA_DRIVER_DMA
+#include "dma/dma.h"
+#endif // CHIMERA_DRIVER_DMA
 
 extern void* __global_pointer$;
 

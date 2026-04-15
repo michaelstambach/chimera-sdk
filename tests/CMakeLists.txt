@@ -13,7 +13,8 @@ chimera-convolve:
   host/uartSimple,
   snitchCluster/matmul,
   snitchCluster/snrt,
-  snitchCluster/simpleOffload
+  snitchCluster/simpleOffload,
+  snitchCluster/dynamic
 ]]
 [[
 chimera-open:
