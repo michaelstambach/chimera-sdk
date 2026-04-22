@@ -3,11 +3,13 @@
 {
 	"name": "Deeploy",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "ghcr.io/pulp-platform/deeploy:devel",
+	//"image": "ghcr.io/pulp-platform/deeploy:devel",
+	"build" : { "dockerfile": "Dockerfile"},
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"llvm-vs-code-extensions.vscode-clangd"
+				"llvm-vs-code-extensions.vscode-clangd",
+				"ms-vscode.cmake-tools"
 			]
 		}
 	},
@@ -19,7 +21,7 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "apt install -y clangd"
+	// "postCreateCommand": ""
 
 	// Configure tool-specific properties.
 	// "customizations": {},
