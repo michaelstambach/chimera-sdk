@@ -3,6 +3,8 @@
 #include "elf.h"
 #include "log.h"
 #include "driver.h"
+#include "sys/types.h"
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -13,7 +15,9 @@
 
 extern void* __global_pointer$;
 
-#define DYN_DEBUG_LOGGING
+uint32_t tls_module_count = 0;
+
+// #define DYN_DEBUG_LOGGING
 
 // offset is a pointer to where the binary starts iff it uses relative positions
 // otherwise just use null
@@ -31,7 +35,7 @@ void read_dynamic_section(struct dyn_loaded* dyns, Elf32_Dyn* dyn_start, void* o
     #endif // DYN_DEBUG_LOGGING
     for (Elf32_Dyn* dyn = dyn_start; dyn->d_tag != DT_NULL; dyn++) {
         #ifdef DYN_DEBUG_LOGGING
-        printf_log("Found dynamic entry with tag: %i\n", dyn->d_tag);
+        //printf_log("Found dynamic entry with tag: %i\n", dyn->d_tag);
         #endif // DYN_DEBUG_LOGGING
         switch (dyn->d_tag) {
             case DT_REL:
@@ -133,6 +137,7 @@ int load_so(struct dyn_loaded* dyns, unsigned char* so_start) {
 
     // load stuff and setup pointer to dynamic section
     Elf32_Dyn* dyn_start = NULL;
+    dyns->tls_phdr = NULL;
     for (uint16_t i = 0; i < header->e_phnum; i++) {
         Elf32_Phdr* phdr = (Elf32_Phdr*)(so_start + header->e_phoff + i*header->e_phentsize);
         if (phdr->p_type == PT_LOAD) {
@@ -146,6 +151,13 @@ int load_so(struct dyn_loaded* dyns, unsigned char* so_start) {
             #endif // CHIMERA_DRIVER_DMA
         } else if (phdr->p_type == PT_DYNAMIC) {
             dyn_start = load_start + phdr->p_vaddr;
+        } else if (phdr->p_type == PT_TLS) {
+            if (dyns->tls_phdr != NULL) {
+                printf_log("Warning! Multiple TLS program headers found, only one is supported!\n");
+                continue;
+            }
+            dyns->tls_phdr = phdr;
+            dyns->tls_module_id = ++tls_module_count;
         }
     }
 
@@ -245,10 +257,28 @@ void relocate_global_pointer(const struct dyn_loaded* dyn_main) {
             return;
         }
     }
-    printf_log("global pointer not required in this executable!\n");
 }
 
-// this is hardcoded to do a RISCV_32 relocation for now and ignores the addend (shitty)
+void relocate_single_symbol(const struct dyn_loaded* dyn_main, bool useplt, const char* symtarget, void* value) {
+    for (uint16_t i = 0; i < (useplt ? dyn_main->relaplt_cnt : dyn_main->rela_cnt); ++i) {
+        Elf32_Rela* rela = (useplt ? dyn_main->relaplt : dyn_main->rela) + i;
+        uint32_t r_sym = ELF32_R_SYM(rela->r_info);
+        Elf32_Sym* sym = dyn_main->symtab + r_sym;
+        char* symname = dyn_main->strtab + sym->st_name;
+        if (strcmp(symtarget, symname) == 0) {
+            #ifdef DYN_DEBUG_LOGGING
+            printf_log("Found relocation entry for '%s'\n", symname);
+            #endif // DYN_DEBUG_LOGGING
+            void** dest = dyn_main->load_start + rela->r_offset;
+            *dest = value;
+            return;
+        }
+    }
+    printf_log("Warning: Symbol '%s' not found in relocations!\n", symtarget);
+
+}
+
+// this is hardcoded to do a RISCV_32 relocation for now
 void relocate_single_rela(const struct dyn_loaded* dyn_main, const struct dyn_loaded* dyn_provider, const Elf32_Rela* rela_start, const uint16_t rela_count) {
     for (uint16_t i = 0; i < rela_count; ++i) {
         const Elf32_Rela* rela = rela_start + i;
@@ -256,7 +286,7 @@ void relocate_single_rela(const struct dyn_loaded* dyn_main, const struct dyn_lo
         uint32_t r_sym = ELF32_R_SYM(rela->r_info);
         Elf32_Sym* sym = dyn_main->symtab + r_sym;
         char* symname = dyn_main->strtab + sym->st_name;
-        if (r_type != R_RISCV_32 && r_type != R_RISCV_JUMP_SLOT) {
+        if (r_type != R_RISCV_32 && r_type != R_RISCV_JUMP_SLOT && r_type != R_RISCV_TLS_DTPMOD32 && r_type != R_RISCV_TLS_DTPREL32) {
             printf_log("Warning: The relocation entry for symbol '%s' is of an unsupported type (%u), skipping.\n", symname, r_type);
             continue;
         }
@@ -265,19 +295,26 @@ void relocate_single_rela(const struct dyn_loaded* dyn_main, const struct dyn_lo
         #endif // DYN_DEBUG_LOGGING
         Elf32_Sym* sym_prov = locate_symbol(dyn_provider, symname);
         if (sym_prov != NULL) {
-            uint32_t** dest = dyn_main->load_start + rela->r_offset;
             #ifdef DYN_DEBUG_LOGGING
-            printf_log("before relocation: %p->%p\n", dest, *dest);
+            // printf_log("before relocation: %p->%p\n", dest, *dest);
             #endif // DYN_DEBUG_LOGGING
             if (r_type == R_RISCV_32) {
+                uint32_t** dest = dyn_main->load_start + rela->r_offset;
                 *dest = dyn_provider->load_start + sym_prov->st_value + rela->r_addend;
             } else if (r_type == R_RISCV_JUMP_SLOT) {
+                uint32_t** dest = dyn_main->load_start + rela->r_offset;
                 *dest = dyn_provider->load_start + sym_prov->st_value;
+            } else if (r_type == R_RISCV_TLS_DTPMOD32) {
+                uint32_t* dest = dyn_main->load_start + rela->r_offset;
+                *dest = dyn_provider->tls_module_id;
+            } else if (r_type == R_RISCV_TLS_DTPREL32) {
+                uint32_t* dest = dyn_main->load_start + rela->r_offset;
+                *dest = sym_prov->st_value + rela->r_addend;
             } else {
                 printf_log("Something has gone wrong, you should never see this!\n");
             }
             #ifdef DYN_DEBUG_LOGGING
-            printf_log("after: %p->%p\n", dest, *dest);
+            // printf_log("after: %p->%p\n", dest, *dest);
             #endif // DYN_DEBUG_LOGGING
         } else {
             #ifdef DYN_DEBUG_LOGGING
@@ -298,4 +335,40 @@ void attempt_relocations(const struct dyn_loaded* dyn_main, const struct dyn_loa
     printf_log("relocating PLT entries\n");
     #endif // DYN_DEBUG_LOGGING
     relocate_single_rela(dyn_main, dyn_provider, dyn_main->relaplt, dyn_main->relaplt_cnt);
+}
+
+void add_tls_module(const struct dyn_loaded* dyn, void** cluster_stack) {
+    if (dyn->tls_phdr == NULL) {
+        printf_log("Error: This file does not have a TLS section!\n");
+        return;
+    }
+    uint32_t* old_dtv = (uint32_t *)*cluster_stack;
+    uint32_t dtv_size = *old_dtv;
+    Elf32_Phdr* phdr = dyn->tls_phdr;
+    size_t new_space = phdr->p_memsz;
+    if (dtv_size < dyn->tls_module_id) {
+        // need to extend the dtv to fit more modules
+        new_space += (dyn->tls_module_id - dtv_size) * sizeof(uint32_t);
+        // increase dtv size
+        *old_dtv = dyn->tls_module_id;
+    }
+    uint32_t* new_dtv = *cluster_stack - new_space;
+    // move the dtv to the top
+    #ifdef DYN_DEBUG_LOGGING
+    printf_log("TLS: dtv size before %lu, after %lu, added space: %lx\n", dtv_size, *old_dtv, new_space);
+    printf_log("TLS: moving the dtv - copying %x bytes from %p to %p\n", dtv_size + 1, old_dtv, new_dtv);
+    #endif // DYN_DEBUG_LOGGING
+    memcpy(new_dtv, *cluster_stack, (dtv_size + 1) * sizeof(uint32_t));
+    void* tls_start = new_dtv + *new_dtv + 1;
+
+    // add the new code to the gap
+    #ifdef DYN_DEBUG_LOGGING
+    printf_log("TLS: moving the tls section - copying %x bytes from %p to %p\n", phdr->p_filesz, dyn->load_start + phdr->p_vaddr, tls_start);
+    #endif // DYN_DEBUG_LOGGING
+    memcpy(tls_start, dyn->load_start + phdr->p_vaddr, phdr->p_filesz);
+
+    // make the new dtv entry
+    new_dtv[dyn->tls_module_id] = (uintptr_t)tls_start;
+    // update the stack pointer
+    *cluster_stack = new_dtv;
 }

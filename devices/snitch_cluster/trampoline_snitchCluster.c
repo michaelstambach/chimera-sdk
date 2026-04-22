@@ -73,4 +73,48 @@ void __attribute__((naked)) _trampoline() {
         : [hartOffset] "i"(CLUSTER_HART_BASE));
 }
 
+/**
+ * @brief Trampoline function for the cluster core.
+ * This function will set up the stack pointer and call the function.
+ *
+ * @warning Make sure that this function is compiled with ISA for the Snitch cores (RV32IM)
+ *
+ */
+// WIESEP: Make sure the compiler does not allocate a stack frame
+void __attribute__((naked)) _trampoline_dyn() {
+    _SETUP_GP();
+
+    asm volatile(
+        // Get hart ID (hardware thread ID)
+        "csrr t0, mhartid\n" // Load mhartid into a0
+
+        "la a0, _trampoline_stack\n"    // Load address of _trampoline_stack
+        "addi t0, t0, -%[hartOffset]\n" // Subtract cluster hart base offset
+        "slli t0, t0, 2\n"              // Multiply hart ID by 4 (size of pointer)
+        "add a0, a0, t0\n"              // Compute the address of _trampoline_stack[hartId]
+        "lw sp, 0(a0)\n"                // Load stack pointer from the computed address
+
+        // all the thread local stuff is stored *below* the initial sp
+        // Set thread pointer (tp) to stack pointer
+        "addi sp, sp, -1\n" // subtract one from the sp (dtv)
+        "mv tp, sp\n" // Move stack pointer to thread pointer
+
+        // Align stack pointer to 16-byte boundary after allocating TLS
+        "andi sp, sp, -0xF\n" // Ensure stack pointer is 16-Byte aligned (ABI)
+
+        // Load function pointer and arguments
+        "la a0, _trampoline_function\n" // Load address of _trampoline_function
+        "add a0, a0, t0\n"              // Compute address of _trampoline_function[hartId]
+        "lw a1, 0(a0)\n"                // Load function pointer into a1
+
+        "la a0, _trampoline_args\n" // Load address of _trampoline_args
+        "add a0, a0, t0\n"          // Compute address of _trampoline_args[hartId]
+        "lw a0, 0(a0)\n"            // Load argument pointer into a0
+
+        // Call the offloaded function
+        "jr a1\n" // Jump and link to the function pointer in a1
+        :         /* No outputs */
+        : [hartOffset] "i"(CLUSTER_HART_BASE));
+}
+
 /** @}*/

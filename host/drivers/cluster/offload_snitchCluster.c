@@ -55,7 +55,11 @@ void *_trampoline_stack[NUM_CLUSTER_CORES] = {NULL};
  * @warning Make sure that this function is compiled with ISA for the Snitch cores (RV32IM)
  *
  */
+#ifdef CLUSTER_DYNAMIC_LINKING
+extern void _trampoline_dyn();
+#else
 extern void _trampoline();
+#endif
 /// @endcond
 
 /**
@@ -77,7 +81,11 @@ static void *_generate_trampoline(uint32_t hartID, void (*function)(void *), voi
     _trampoline_args[trampoline_idx] = args;
     _trampoline_stack[trampoline_idx] = stack;
 
+#ifdef CLUSTER_DYNAMIC_LINKING
+    return _trampoline_dyn;
+#else
     return _trampoline;
+#endif
 }
 
 /**

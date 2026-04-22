@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2024 ETH Zurich and University of Bologna
 # SPDX-License-Identifier: Apache-2.0
 
-set(TEST_NAME test_snitchCluster_dynamic)
+set(TEST_NAME test_snitchCluster_tls)
 
 # get_property(SHARED_SUPPORT GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
 # message("supports shared libs: ${SHARED_SUPPORT}")
@@ -21,17 +21,17 @@ target_compile_options(${TEST_NAME}_host
 )
 target_link_libraries(${TEST_NAME}_host PUBLIC runtime_host picolibc_host trampoline_rv32im)
 
-#### statically link cluster interrupt handler
+#### statically link some cluster code
 
-add_library(${TEST_NAME}_cluster_interrupt OBJECT src_cluster/interrupt_handler.c)
-target_include_directories(${TEST_NAME}_cluster_interrupt PUBLIC include)
+add_library(${TEST_NAME}_cluster_static OBJECT src_cluster/cluster_static.c)
+target_include_directories(${TEST_NAME}_cluster_static PUBLIC include)
 
 # WIESEP: Set the correct ISA and ABI for the cluster
-target_compile_options(${TEST_NAME}_cluster_interrupt
+target_compile_options(${TEST_NAME}_cluster_static
   PRIVATE
   -O2
 )
-target_link_libraries(${TEST_NAME}_cluster_interrupt PUBLIC runtime_cluster_snitch picolibc_cluster_snitch)
+target_link_libraries(${TEST_NAME}_cluster_static PUBLIC runtime_cluster_snitch picolibc_cluster_snitch)
 
 ######## CLUSTER Code ##########################################################
 
@@ -42,14 +42,6 @@ add_custom_target(${TEST_NAME}_binwrap)
 add_cluster_shared_target(${TEST_NAME}_cluster)
 target_sources(${TEST_NAME}_cluster PUBLIC src_cluster/test_cluster.c)
 
-# cluster work 1
-add_cluster_shared_target(${TEST_NAME}_cluster_work1)
-target_sources(${TEST_NAME}_cluster_work1 PUBLIC src_cluster/cluster_ret1.c)
-
-# cluster work 2
-add_cluster_shared_target(${TEST_NAME}_cluster_work2)
-target_sources(${TEST_NAME}_cluster_work2 PUBLIC src_cluster/cluster_ret2.c)
-
 ######## TEST Executable #######################################################
 add_chimera_test(
   ${TEST_NAME}
@@ -57,9 +49,7 @@ add_chimera_test(
 
 # WIESEP: Link the host and cluster code to the test executable
 target_link_libraries(${TEST_NAME} PUBLIC ${TEST_NAME}_host)
-target_link_libraries(${TEST_NAME} PUBLIC ${TEST_NAME}_cluster_interrupt)
+target_link_libraries(${TEST_NAME} PUBLIC ${TEST_NAME}_cluster_static)
 target_link_libraries(${TEST_NAME} PUBLIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${TEST_NAME}_cluster_wrapped.o")
-target_link_libraries(${TEST_NAME} PUBLIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${TEST_NAME}_cluster_work1_wrapped.o")
-target_link_libraries(${TEST_NAME} PUBLIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${TEST_NAME}_cluster_work2_wrapped.o")
 
 add_dependencies(${TEST_NAME} ${TEST_NAME}_binwrap)
