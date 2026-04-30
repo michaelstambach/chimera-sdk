@@ -294,7 +294,8 @@ void relocate_single_rela(const struct dyn_loaded* dyn_main, const struct dyn_lo
         printf_log("Found relocation entry for symbol '%s'\n", symname);
         #endif // DYN_DEBUG_LOGGING
         Elf32_Sym* sym_prov = locate_symbol(dyn_provider, symname);
-        if (sym_prov != NULL) {
+        // if the symbol is NOTYPE with value 0 it probably is undefined (is there a better way to check this?)
+        if (sym_prov != NULL && !(ELF32_ST_TYPE(sym_prov->st_info) == STT_NOTYPE && sym_prov->st_value == 0)) {
             #ifdef DYN_DEBUG_LOGGING
             // printf_log("before relocation: %p->%p\n", dest, *dest);
             #endif // DYN_DEBUG_LOGGING
@@ -326,15 +327,19 @@ void relocate_single_rela(const struct dyn_loaded* dyn_main, const struct dyn_lo
 
 void attempt_relocations(const struct dyn_loaded* dyn_main, const struct dyn_loaded* dyn_provider) {
     // got
-    #ifdef DYN_DEBUG_LOGGING
-    printf_log("relocating main GOT entries\n");
-    #endif // DYN_DEBUG_LOGGING
-    relocate_single_rela(dyn_main, dyn_provider, dyn_main->rela, dyn_main->rela_cnt);
+    if (dyn_main->rela != NULL) {
+        #ifdef DYN_DEBUG_LOGGING
+        printf_log("relocating main GOT entries\n");
+        #endif // DYN_DEBUG_LOGGING
+        relocate_single_rela(dyn_main, dyn_provider, dyn_main->rela, dyn_main->rela_cnt);
+    }
     // plt
-    #ifdef DYN_DEBUG_LOGGING
-    printf_log("relocating PLT entries\n");
-    #endif // DYN_DEBUG_LOGGING
-    relocate_single_rela(dyn_main, dyn_provider, dyn_main->relaplt, dyn_main->relaplt_cnt);
+    if (dyn_main->relaplt != NULL) {
+        #ifdef DYN_DEBUG_LOGGING
+        printf_log("relocating PLT entries\n");
+        #endif // DYN_DEBUG_LOGGING
+        relocate_single_rela(dyn_main, dyn_provider, dyn_main->relaplt, dyn_main->relaplt_cnt);
+    }
 }
 
 void add_tls_module(const struct dyn_loaded* dyn, void** cluster_stack) {

@@ -51,12 +51,12 @@ int32_t clusterOffload(void *args, void* workFunction) {
 
     printf_log("Waiting for cluster to finish...\n");
 
-    offload_snitchCluster(workFunction, NULL, stack_cluster_ptr, CLUSTER1);
+    offload_snitchCluster(workFunction, args, stack_cluster_ptr, CLUSTER1);
     uint32_t retVal = wait_snitchCluster_return(CLUSTER1);
 
     set_snitchCluster_clockGating(CLUSTER1, 1);
 
-    printf("Returned value: 0x%08x (%d)\n", retVal, retVal);
+    // printf_log("Returned value: 0x%08x (%d)\n", retVal, retVal);
 
     return retVal;
 }
@@ -80,7 +80,7 @@ int main(void) {
         return -1;
     }
 
-    relocate_global_pointer(dyns_main);
+    // relocate_global_pointer(dyns_main);
     attempt_relocations(dyns_main, dyns_prov);
     uint32_t lib_var = getlibvar();
     printf_log("after relocation: getLibraryVariant()->%u, libraryVariant points to %p\n", lib_var);
@@ -97,7 +97,6 @@ int main(void) {
     printf_log("attempting to execute cluster function on the cluster...\n");
     uint32_t retValCluster = clusterOffload(NULL, clusterEntry);
     printf_log("return value on cluster was: %u\n", retValCluster);
-
 
     return 0;
 }
