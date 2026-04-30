@@ -65,12 +65,6 @@ int32_t clusterOffload(void *args, void* workFunction, uint8_t cluster, void *st
     return retVal;
 }
 
-void create_dtv_entry_on_cluster(uint8_t cluster, void* stack_ptr, uint32_t dtv_index, void* dtv_value) {
-    add_dtv_entry_args_t clusterArgs = {dtv_index, dtv_value};
-    printf_log("creating dtv entry on cluster %u with index %lu and value %p\n", cluster, dtv_index, dtv_value);
-    clusterOffload(&clusterArgs, cluster_add_dtv_entry, cluster, stack_ptr);
-}
-
 
 int main(void) {
 

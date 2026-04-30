@@ -37,9 +37,3 @@ void *__tls_get_addr(tls_index *ti) {
     void** tp = __builtin_thread_pointer();
     return (void *)(tp[ti->ti_module] + ti->ti_offset);
 }
-
-void cluster_add_dtv_entry(void* args) {
-    add_dtv_entry_args_t *argsStruct = (add_dtv_entry_args_t *)args;
-    void** tp = __builtin_thread_pointer();
-    tp[argsStruct->index] = argsStruct->value;
-}
