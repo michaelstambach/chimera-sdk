@@ -29,6 +29,7 @@ chimera-open:
   snitchCluster/simpleOffload,
   snitchCluster/doublelib,
   snitchCluster/dynamic,
+  snitchCluster/dynlibc,
   snitchCluster/tls
 ]]
 [[
@@ -51,7 +52,7 @@ set_target_properties(${name} PROPERTIES LINK_DYNAMIC TRUE)
 # so we need to tell the linker directly to do it (-Xlinker passes the next argument to the linker)
 target_link_options(${name} PRIVATE -Xlinker -shared)
 target_include_directories(${name} PUBLIC include)
-target_link_libraries(${name} PUBLIC runtime_cluster_snitch picolibc_cluster_snitch)
+target_link_libraries(${name} PUBLIC runtime_cluster_snitch)
 # wrap the whole thing into the data section
 set(LIB_SO_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}.so")
 set(LIB_WRAPPED_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${name}_wrapped.o")
