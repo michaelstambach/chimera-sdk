@@ -30,6 +30,7 @@ set(C_SOURCES
 
 
 target_sources(runtime_cluster_snitch PRIVATE ${C_SOURCES})
+target_sources(runtime_cluster_snitch_pic PRIVATE ${C_SOURCES})
 
 # Remove -Wundefined-inline warnings from snitch sources (only for these files)
 set_source_files_properties(
@@ -44,8 +45,20 @@ target_include_directories(runtime_cluster_snitch
     ${SNITCH_ROOT_DIR}/core/inc
     ${SNITCH_ROOT_DIR}/omp/inc
 )
+target_include_directories(runtime_cluster_snitch_pic
+    PUBLIC
+    ${SN_DEPS_DIR}
+    ${SNITCH_ROOT_DIR}/target/common/inc
+    ${SNITCH_ROOT_DIR}/core/inc
+    ${SNITCH_ROOT_DIR}/omp/inc
+)
 
 target_include_directories(runtime_cluster_snitch
+    PRIVATE
+    ${SNITCH_ROOT_DIR}/core/src
+    ${SNITCH_ROOT_DIR}/omp/src
+)
+target_include_directories(runtime_cluster_snitch_pic
     PRIVATE
     ${SNITCH_ROOT_DIR}/core/src
     ${SNITCH_ROOT_DIR}/omp/src

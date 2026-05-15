@@ -127,6 +127,10 @@ int load_so(struct dyn_loaded* dyns, unsigned char* so_start) {
     printf_log("ELF will require %x bytes of memory when loaded\n", load_size);
     #endif // DYN_DEBUG_LOGGING
     void* load_start = memory_island_malloc(load_size);
+    if (load_start == NULL) {
+        printf_log("malloc for loading the ELF failed!\n");
+        return 0;
+    }
     dyns->load_start = load_start;
     #ifdef DYN_DEBUG_LOGGING
     printf_log("ELF will be loaded starting at %p\n", load_start);
@@ -283,10 +287,19 @@ void relocate_single_rela(const struct dyn_loaded* dyn_main, const struct dyn_lo
     for (uint16_t i = 0; i < rela_count; ++i) {
         const Elf32_Rela* rela = rela_start + i;
         uint32_t r_type = ELF32_R_TYPE(rela->r_info);
+        if (dyn_main == dyn_provider && r_type == R_RISCV_RELATIVE) {
+            // handle relative separately and only when relocating to itself
+            uint32_t** dest = dyn_main->load_start + rela->r_offset;
+            *dest = dyn_main->load_start + rela->r_offset;
+            continue;
+        }
         uint32_t r_sym = ELF32_R_SYM(rela->r_info);
         Elf32_Sym* sym = dyn_main->symtab + r_sym;
         char* symname = dyn_main->strtab + sym->st_name;
-        if (r_type != R_RISCV_32 && r_type != R_RISCV_JUMP_SLOT && r_type != R_RISCV_TLS_DTPMOD32 && r_type != R_RISCV_TLS_DTPREL32) {
+        if (r_type != R_RISCV_32 &&
+            r_type != R_RISCV_JUMP_SLOT &&
+            r_type != R_RISCV_TLS_DTPMOD32 &&
+            r_type != R_RISCV_TLS_DTPREL32) {
             printf_log("Warning: The relocation entry for symbol '%s' is of an unsupported type (%u), skipping.\n", symname, r_type);
             continue;
         }
@@ -294,17 +307,23 @@ void relocate_single_rela(const struct dyn_loaded* dyn_main, const struct dyn_lo
         printf_log("Found relocation entry for symbol '%s'\n", symname);
         #endif // DYN_DEBUG_LOGGING
         Elf32_Sym* sym_prov = locate_symbol(dyn_provider, symname);
-        // if the symbol is NOTYPE with value 0 it probably is undefined (is there a better way to check this?)
-        if (sym_prov != NULL && !(ELF32_ST_TYPE(sym_prov->st_info) == STT_NOTYPE && sym_prov->st_value == 0)) {
+        // if SHN_UNDEF the symbol is not defined within this file
+        if (sym_prov != NULL && sym_prov->st_shndx != SHN_UNDEF) {
             #ifdef DYN_DEBUG_LOGGING
             // printf_log("before relocation: %p->%p\n", dest, *dest);
             #endif // DYN_DEBUG_LOGGING
+            void* provider_relative_offset = NULL;
+            if (sym_prov->st_shndx != SHN_ABS) {
+                // some symbols have absolute values which we should not
+                // adjust to the load address of the provider
+                provider_relative_offset = dyn_provider->load_start;
+            }
             if (r_type == R_RISCV_32) {
                 uint32_t** dest = dyn_main->load_start + rela->r_offset;
-                *dest = dyn_provider->load_start + sym_prov->st_value + rela->r_addend;
+                *dest = provider_relative_offset + sym_prov->st_value + rela->r_addend;
             } else if (r_type == R_RISCV_JUMP_SLOT) {
                 uint32_t** dest = dyn_main->load_start + rela->r_offset;
-                *dest = dyn_provider->load_start + sym_prov->st_value;
+                *dest = provider_relative_offset + sym_prov->st_value;
             } else if (r_type == R_RISCV_TLS_DTPMOD32) {
                 uint32_t* dest = dyn_main->load_start + rela->r_offset;
                 *dest = dyn_provider->tls_module_id;

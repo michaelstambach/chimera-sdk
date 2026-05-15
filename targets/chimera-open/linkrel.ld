@@ -37,4 +37,7 @@ SECTIONS {
   __base_dram     = 0x80000000;
   __base_memisl   = 0x48000000;
   /* __stack_start   = ORIGIN(memisl) + LENGTH(memisl); */
+
+  __l3_heap_start = 0x80000000;
+  __l3_heap_end   = 0x80000000 + 8M;
 }

@@ -126,3 +126,51 @@ target_link_options(runtime_cluster_snitch
   -nostartfiles
   -ffreestanding
 )
+
+#########################################################################################
+# Snitch Cluster Runtime Library - position independent for linking into shared objects #
+#########################################################################################
+# it is still a static library which is linked into shared libraries
+add_library(runtime_cluster_snitch_pic STATIC)
+set_target_properties(runtime_cluster_snitch_pic PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+
+target_link_directories(runtime_cluster_snitch_pic PUBLIC
+  ${TOOLCHAIN_DIR}/lib/clang/${LLVM_VERSION}/lib/baremetal/${COMPILERRT_CLUSTER_SNITCH}
+)
+# WIESEP: Make sure picolibc exists before building the host runtime for the header files
+add_dependencies(runtime_cluster_snitch_pic picolibc)
+
+# WIESEP: Export the headers also to the cluster runtime
+target_include_directories(runtime_cluster_snitch_pic
+  PUBLIC
+  ${CMAKE_CURRENT_LIST_DIR}/inc
+  ${CMAKE_CURRENT_LIST_DIR}/inc/cfg
+  ${CMAKE_CURRENT_LIST_DIR}/inc/regs
+  ${CMAKE_CURRENT_LIST_DIR}/inc/addr_maps
+)
+
+# WIESEP: Do not export optimization flags
+target_compile_options(runtime_cluster_snitch_pic
+  PRIVATE
+  -O2
+)
+
+target_compile_definitions(runtime_cluster_snitch_pic PUBLIC TARGET_PLATFORM_CHIMERA_OPEN)
+
+target_compile_options(runtime_cluster_snitch_pic
+  PUBLIC
+  --target=riscv32-unknown-elf
+  -march=${ISA_CLUSTER_SNITCH}
+  -mabi=${ABI_CLUSTER_SNITCH}
+)
+
+# WIESEP: Expose common link option
+target_link_options(runtime_cluster_snitch_pic
+  PUBLIC
+  -L${CMAKE_CURRENT_LIST_DIR}
+  -Tlinkrel.ld
+  --target=riscv32-unknown-elf
+  -mabi=${ABI_CLUSTER_SNITCH}
+  -nostartfiles
+  -ffreestanding
+)

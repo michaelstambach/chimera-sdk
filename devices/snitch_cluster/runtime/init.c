@@ -10,6 +10,8 @@
 #include "snrt.h"
 
 void snrt_init() {
+// if snrt is used from a shared library the linker should do memory init
+#ifndef SNRT_SHARED_LIBRARY
     /* Linker script symbols: declare as extern char[] and use the symbol
      * address directly (i.e. __sym, not &__sym). Never declare them as
      * object types (e.g. volatile uint32_t) — the linker only provides
@@ -43,11 +45,18 @@ void snrt_init() {
     size_t size_tbss = (uintptr_t)__tbss_end - (uintptr_t)__tbss_start;
     uintptr_t tbss_off = (uintptr_t)__tbss_start - (uintptr_t)__tdata_start;
     memset((void *)(tls_ptr + tbss_off), 0, size_tbss);
+#else // compiling for shared library
+    /* __l3_heap_start/__l3_heap_end are linker-defined address tokens for
+     * the L3 heap region. L1 cluster heap starts are accessed via
+     * _chimera_clusterHeapStart[] from soc_addr_map.h. */
+    extern char __l3_heap_start[], __l3_heap_end[];
+#endif // SNRT_SHARED_LIBRARY
 
     /********** Cluster Initialization **********/
     if (snrt_is_dm_core()) {
         uint32_t cluster_idx = snrt_cluster_idx();
 
+#ifndef SNRT_SHARED_LIBRARY
         // Preload l1 data from LMA to VMA
         uintptr_t __l1_lma_start = _chimera_clusterL1LmaStart[cluster_idx];
         uintptr_t __l1_lma_end = _chimera_clusterL1LmaEnd[cluster_idx];
@@ -83,6 +92,7 @@ void snrt_init() {
                               size_cbss);
         }
 
+#endif // SNRT_SHARED_LIBRARY
         // Initialize the cluster local storage pointer
         uintptr_t l1_heap_base = _chimera_clusterHeapStart[cluster_idx];
         _cls_ptr = (cls_t *)l1_heap_base;
@@ -98,8 +108,11 @@ void snrt_init() {
 
         snrt_dma_wait_all();
 
+#ifndef SNRT_SHARED_LIBRARY
+        // to reduce the size we do not use printf for dynamic code
         // Initialize the printf mutex
         snrt_printf_init();
+#endif // SNRT_SHARED_LIBRARY
 
 #ifdef TRACE
         printf("Size of .tdata : %6zu bytes (LMA %p - %p, VMA %p - %p)\n", size_tdata,
