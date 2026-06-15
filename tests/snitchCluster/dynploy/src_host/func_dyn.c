@@ -34,6 +34,7 @@ int32_t (*get_function_pointer(void** stack_ptr))(void* args) {
     load_so(dyns_gemm, _binary_test_snitchCluster_dynploy_cluster_gemm_red_start);
 #else
     load_so(dyns_gemm, _binary_test_snitchCluster_dynploy_cluster_gemm_start);
+#endif
 
     printf_log("performing self-relocations for main library\n");
     attempt_relocations(dyns_main, dyns_main);
