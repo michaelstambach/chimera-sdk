@@ -42,11 +42,20 @@ target_include_directories(${TEST_NAME}_cluster_static_work1 PUBLIC
 )
 target_compile_options(${TEST_NAME}_cluster_static_work1 PRIVATE -O2)
 target_link_libraries(${TEST_NAME}_cluster_static_work1 PUBLIC runtime_cluster_snitch picolibc_cluster_snitch)
+
 # cluster work variant 2
-# add_library(${TEST_NAME}_cluster_static_work2 OBJECT src_cluster/test_cluster.c src_cluster/cluster_work2.c)
-# target_include_directories(${TEST_NAME}_cluster_static_work2 PUBLIC include)
-# target_compile_options(${TEST_NAME}_cluster_static_work2 PRIVATE -O2)
-# target_link_libraries(${TEST_NAME}_cluster_static_work2 PUBLIC runtime_cluster_snitch picolibc_cluster_snitch)
+add_library(${TEST_NAME}_cluster_static_work2 OBJECT
+  src_cluster/main.c
+  src_cluster/Network.c
+  src_cluster/deeploysnitchlib/src/Gemm_s8_redundant.c
+)
+target_include_directories(${TEST_NAME}_cluster_static_work2 PUBLIC
+  include
+  src_cluster/inc
+  src_cluster/deeploysnitchlib/inc
+)
+target_compile_options(${TEST_NAME}_cluster_static_work2 PRIVATE -O2)
+target_link_libraries(${TEST_NAME}_cluster_static_work2 PUBLIC runtime_cluster_snitch picolibc_cluster_snitch)
 
 ######## dynamic CLUSTER Code ###################################################
 
@@ -57,17 +66,21 @@ add_custom_target(${TEST_NAME}_binwrap)
 add_cluster_shared_target(${TEST_NAME}_cluster_main)
 target_sources(${TEST_NAME}_cluster_main PUBLIC src_cluster/main.c src_cluster/Network.c)
 target_include_directories(${TEST_NAME}_cluster_main PUBLIC include src_cluster/inc src_cluster/deeploysnitchlib/inc)
-# target_compile_definitions(${TEST_NAME}_cluster_main PUBLIC _PICOLIBC_PRINTF=i)
-# target_link_options(${TEST_NAME}_cluster_main PUBLIC "SHELL: -Xlinker --defsym=vfprintf=__i_vfprintf")
 # currently integrated into main to reduce tls headache
 # # network
 # add_cluster_shared_target(${TEST_NAME}_cluster_network)
 # target_sources(${TEST_NAME}_cluster_network PUBLIC src_cluster/Network.c)
 # target_include_directories(${TEST_NAME}_cluster_network PUBLIC src_cluster/inc src_cluster/deeploysnitchlib/inc)
-# core
+
+# normal kernel
 add_cluster_shared_target(${TEST_NAME}_cluster_gemm)
 target_sources(${TEST_NAME}_cluster_gemm PUBLIC src_cluster/deeploysnitchlib/src/Gemm_s8.c)
 target_include_directories(${TEST_NAME}_cluster_gemm PUBLIC src_cluster/deeploysnitchlib/inc)
+
+# redundant kernel
+add_cluster_shared_target(${TEST_NAME}_cluster_gemm_red)
+target_sources(${TEST_NAME}_cluster_gemm_red PUBLIC src_cluster/deeploysnitchlib/src/Gemm_s8_redundant.c)
+target_include_directories(${TEST_NAME}_cluster_gemm_red PUBLIC src_cluster/deeploysnitchlib/inc)
 
 ######## TEST Executable #######################################################
 # statically linked
@@ -76,10 +89,10 @@ target_link_libraries(${TEST_NAME}_static1 PUBLIC ${TEST_NAME}_host_static)
 target_link_libraries(${TEST_NAME}_static1 PUBLIC ${TEST_NAME}_cluster_static)
 target_link_libraries(${TEST_NAME}_static1 PUBLIC ${TEST_NAME}_cluster_static_work1)
 
-# add_chimera_test(${TEST_NAME}_static2)
-# target_link_libraries(${TEST_NAME}_static2 PUBLIC ${TEST_NAME}_host_static)
-# target_link_libraries(${TEST_NAME}_static2 PUBLIC ${TEST_NAME}_cluster_static)
-# target_link_libraries(${TEST_NAME}_static2 PUBLIC ${TEST_NAME}_cluster_static_work2)
+add_chimera_test(${TEST_NAME}_static2)
+target_link_libraries(${TEST_NAME}_static2 PUBLIC ${TEST_NAME}_host_static)
+target_link_libraries(${TEST_NAME}_static2 PUBLIC ${TEST_NAME}_cluster_static)
+target_link_libraries(${TEST_NAME}_static2 PUBLIC ${TEST_NAME}_cluster_static_work2)
 
 # fully dynamic
 add_chimera_test(${TEST_NAME}_dyn)
@@ -87,4 +100,5 @@ target_link_libraries(${TEST_NAME}_dyn PUBLIC ${TEST_NAME}_host_dyn)
 target_link_libraries(${TEST_NAME}_dyn PUBLIC ${TEST_NAME}_cluster_static)
 target_link_libraries(${TEST_NAME}_dyn PUBLIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${TEST_NAME}_cluster_main_wrapped.o")
 target_link_libraries(${TEST_NAME}_dyn PUBLIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${TEST_NAME}_cluster_gemm_wrapped.o")
+target_link_libraries(${TEST_NAME}_dyn PUBLIC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${TEST_NAME}_cluster_gemm_red_wrapped.o")
 add_dependencies(${TEST_NAME}_dyn ${TEST_NAME}_binwrap)

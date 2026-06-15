@@ -51,6 +51,7 @@ add_library(${name} SHARED)
 set_target_properties(${name} PROPERTIES LINK_DYNAMIC TRUE)
 # this is necessary because clang does not "support" shared libraries on this platform
 # so we need to tell the linker directly to do it (-Xlinker passes the next argument to the linker)
+target_compile_options(${name} PRIVATE -O2)
 target_link_options(${name} PRIVATE -Xlinker -shared)
 target_include_directories(${name} PUBLIC include)
 target_link_libraries(${name} PUBLIC runtime_cluster_snitch_pic)

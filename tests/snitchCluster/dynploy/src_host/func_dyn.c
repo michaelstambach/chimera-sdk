@@ -15,6 +15,12 @@ extern unsigned char _binary_test_snitchCluster_dynploy_cluster_gemm_start[];
 extern unsigned char _binary_test_snitchCluster_dynploy_cluster_gemm_end[];
 extern unsigned char _binary_test_snitchCluster_dynploy_cluster_gemm_size[];
 
+extern unsigned char _binary_test_snitchCluster_dynploy_cluster_gemm_red_start[];
+extern unsigned char _binary_test_snitchCluster_dynploy_cluster_gemm_red_end[];
+extern unsigned char _binary_test_snitchCluster_dynploy_cluster_gemm_red_size[];
+
+#define USE_GEMM_REDUNDANT
+
 // extern uintptr_t volatile tohost, fromhost;
 
 int32_t (*get_function_pointer(void** stack_ptr))(void* args) {
@@ -24,6 +30,9 @@ int32_t (*get_function_pointer(void** stack_ptr))(void* args) {
 
     printf_log("loading cluster kernel\n");
     struct dyn_loaded* dyns_gemm = memory_island_malloc(sizeof(struct dyn_loaded));
+#ifdef USE_GEMM_REDUNDANT
+    load_so(dyns_gemm, _binary_test_snitchCluster_dynploy_cluster_gemm_red_start);
+#else
     load_so(dyns_gemm, _binary_test_snitchCluster_dynploy_cluster_gemm_start);
 
     printf_log("performing self-relocations for main library\n");

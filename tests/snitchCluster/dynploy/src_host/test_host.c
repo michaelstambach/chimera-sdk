@@ -120,8 +120,6 @@ int main(void) {
     printf_log("Returned from cluster: 0x%08x (%d)\n", retVal, retVal);
 
     printf_log("network output is at %p\n", networkOutput[0]);
-    uint8_t* test_val = ((uint8_t *)networkOutput[0]) + 3000;
-    printf("test val: %p->%u\n", test_val, *test_val);
     int32_t tot_err = 0;
     uint32_t tot = 0;
     int32_t diff;

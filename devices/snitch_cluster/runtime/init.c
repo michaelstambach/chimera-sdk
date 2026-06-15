@@ -110,8 +110,10 @@ void snrt_init() {
 
 #ifndef SNRT_SHARED_LIBRARY
         // to reduce the size we do not use printf for dynamic code
+        // this is because a big buffer gets included within the executable
+        // once this is fixed the line below could be enabled again
         // Initialize the printf mutex
-        snrt_printf_init();
+        // snrt_printf_init();
 #endif // SNRT_SHARED_LIBRARY
 
 #ifdef TRACE
